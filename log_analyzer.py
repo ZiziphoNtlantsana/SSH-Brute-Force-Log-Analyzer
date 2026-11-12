@@ -1,5 +1,6 @@
 import re
-from collections import Counter
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 
 LOG_PATTERN = re.compile(
     r"^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+\S+\s+sshd\[\d+\]:\s+"
@@ -23,13 +24,41 @@ def load_events(path):
     return  events
 
 def count_failures_by_ip(events):
-    return Counter(e["ip"] for e in events if e["status"]=="Failed")            
-            
+    return Counter(e["ip"] for e in events if e["status"]=="Failed") 
 
+def event_time(event):
+    text = f"2026 {event['month']} {event['day']} {event['time']}"
+    return datetime.strptime(text, "%Y %b %d %H:%M:%S")
+
+
+def find_brute_force_ips(events, threshold=3, window_seconds=60):
+    failure_times = defaultdict(list)
+    for e in events:
+        if e["status"] == "Failed":
+            failure_times[e["ip"]].append(event_time(e))
+
+    window = timedelta(seconds=window_seconds)
+    flagged = {}
+    for ip, times in failure_times.items():
+        times.sort()
+        start = 0
+        most_in_window = 0
+        for end in range(len(times)):
+            while times[end] - times[start] > window:
+                start += 1
+            most_in_window = max(most_in_window, end - start + 1)
+        if most_in_window >= threshold:
+            flagged[ip] = most_in_window
+    return flagged
 
 if __name__ == "__main__":
     events = load_events("sample_auth.log")
     print(f"Parsed {len(events)} events")
-    for ip, count in count_failures_by_ip(events).most_common():
+    print("Flagged IPs (3+ failures within 60 seconds):")
+    for ip, count in find_brute_force_ips(events).items():
         print(ip, count)
+
+            
+
+
     
