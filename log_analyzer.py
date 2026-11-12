@@ -1,4 +1,5 @@
 import re
+from collections import Counter
 
 LOG_PATTERN = re.compile(
     r"^(?P<month>\w{3})\s+(?P<day>\d{1,2})\s+(?P<time>\d{2}:\d{2}:\d{2})\s+\S+\s+sshd\[\d+\]:\s+"
@@ -12,9 +13,23 @@ def parse_line(line):
     if not match:
         return None
     return match.groupdict()
+def load_events(path):
+    events= []
+    with open(path) as f:
+        for line in f:
+            event = parse_line(line)
+            if event:
+                events.append(event)
+    return  events
+
+def count_failures_by_ip(events):
+    return Counter(e["ip"] for e in events if e["status"]=="Failed")            
+            
 
 
 if __name__ == "__main__":
-    with open("sample_auth.log") as f:
-        for line in f:
-            print(parse_line(line))
+    events = load_events("sample_auth.log")
+    print(f"Parsed {len(events)} events")
+    for ip, count in count_failures_by_ip(events).most_common():
+        print(ip, count)
+    
