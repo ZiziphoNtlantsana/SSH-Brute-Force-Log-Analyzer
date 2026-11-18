@@ -77,22 +77,42 @@ def find_targeted_usernames(events, flagged):
                 targeted[ip].add(e["user"])
     return targeted
 
+def print_report(events):
+    flagged = find_brute_force_ips(events)
+    compromised = find_compromised(events, flagged)
+    targeted = find_targeted_usernames(events, flagged)
+
+    # Convert compromised list into a dictionary keyed by IP
+    compromised_dict = {item["ip"]: item for item in compromised}
+
+    print("\n========== SECURITY REPORT ==========")
+    print(f"Total events analysed: {len(events)}")
+    print(f"Flagged IP addresses: {len(flagged)}")
+    print("====================================")
+
+    for ip in flagged:
+        print(f"\nIP Address: {ip}")
+        print(f"Failed attempts in window: {flagged[ip]}")
+
+        usernames = targeted.get(ip, set())
+        print(f"Targeted usernames: {', '.join(sorted(usernames))}")
+
+        if ip in compromised_dict:
+            details = compromised_dict[ip]
+            print("Status: COMPROMISED")
+            print(f"Successful login username: {details['user']}")
+            print(f"Successful login timestamp: {details['time']}")
+        else:
+            print("Status: BRUTE FORCE ATTEMPT (No successful login detected)")
+
+        print("------------------------------------")
+
     
   
 
 if __name__ == "__main__":
     events = load_events("sample_auth.log")
-    print(f"Parsed {len(events)} events")
-    print("Flagged IPs (3+ failures within 60 seconds):")
-    for ip, count in find_brute_force_ips(events).items():
-        print(ip, count)
-    flagged = find_brute_force_ips(events)
-    print("Compromised logins:")
-    for c in find_compromised(events, flagged):
-        print(c)
-    print("Usernames targeted:")
-    for ip, users in find_targeted_usernames(events, flagged).items():
-        print(ip, sorted(users))
+    print_report(events)
 
 
             
