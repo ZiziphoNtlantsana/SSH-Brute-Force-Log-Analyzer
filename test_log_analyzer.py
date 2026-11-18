@@ -65,3 +65,18 @@ def test_find_brute_force_ips_ignores_failures_spread_out():
     result = find_brute_force_ips(events)
 
     assert result == {}
+
+def test_find_targeted_usernames_collects_failed_usernames_only():
+    events = [
+        {"month": "Nov", "day": "11", "time": "09:02:17", "status": "Failed", "user": "oracle", "ip": "198.51.100.77"},
+        {"month": "Nov", "day": "11", "time": "09:02:19", "status": "Failed", "user": "postgres", "ip": "198.51.100.77"},
+        {"month": "Nov", "day": "11", "time": "09:02:21", "status": "Failed", "user": "root", "ip": "198.51.100.77"},
+        {"month": "Nov", "day": "11", "time": "09:02:25", "status": "Accepted", "user": "admin", "ip": "198.51.100.77"},
+        {"month": "Nov", "day": "11", "time": "09:03:00", "status": "Failed", "user": "ubuntu", "ip": "10.0.0.9"},
+    ]
+    flagged = {"198.51.100.77": 3}
+
+    result = find_targeted_usernames(events, flagged)
+
+    assert result["198.51.100.77"] == {"oracle", "postgres", "root"}
+    assert "10.0.0.9" not in result
