@@ -64,6 +64,20 @@ def find_compromised(events, flagged):
         elif e["status"] == "Accepted" and ip in failed_seen:
             compromised.append({"ip": ip, "user": e["user"], "time": e["time"]}) 
     return compromised
+
+def find_targeted_usernames(events, flagged):
+    targeted = defaultdict(set)
+
+    for e in events:
+            ip = e["ip"]
+            if ip not in flagged:
+                continue
+
+            if e["status"] == "Failed":
+                targeted[ip].add(e["user"])
+    return targeted
+
+    
   
 
 if __name__ == "__main__":
@@ -76,6 +90,10 @@ if __name__ == "__main__":
     print("Compromised logins:")
     for c in find_compromised(events, flagged):
         print(c)
+    print("Usernames targeted:")
+    for ip, users in find_targeted_usernames(events, flagged).items():
+        print(ip, sorted(users))
+
 
             
 
