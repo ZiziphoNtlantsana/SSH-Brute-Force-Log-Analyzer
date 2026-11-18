@@ -51,12 +51,31 @@ def find_brute_force_ips(events, threshold=3, window_seconds=60):
             flagged[ip] = most_in_window
     return flagged
 
+
+def find_compromised(events, flagged):
+    failed_seen = set()
+    compromised = []
+    for e in events:
+        ip = e["ip"]
+        if ip not in flagged:
+            continue
+        if e["status"] == "Failed":
+            failed_seen.add(ip)
+        elif e["status"] == "Accepted" and ip in failed_seen:
+            compromised.append({"ip": ip, "user": e["user"], "time": e["time"]}) 
+    return compromised
+  
+
 if __name__ == "__main__":
     events = load_events("sample_auth.log")
     print(f"Parsed {len(events)} events")
     print("Flagged IPs (3+ failures within 60 seconds):")
     for ip, count in find_brute_force_ips(events).items():
         print(ip, count)
+    flagged = find_brute_force_ips(events)
+    print("Compromised logins:")
+    for c in find_compromised(events, flagged):
+        print(c)
 
             
 
