@@ -1,4 +1,4 @@
-from log_analyzer import find_compromised
+from log_analyzer import find_compromised, find_brute_force_ips, find_targeted_usernames
 
 def test_find_compromised_detects_login_after_failures():
     events = [
@@ -41,3 +41,27 @@ def test_find_compromised_ignores_login_before_failures():
     result = find_compromised(events, flagged)
 
     assert result == []
+
+def test_find_brute_force_ips_flags_three_failures_within_window():
+    events = [
+        {"month": "Nov", "day": "11", "time": "08:15:01", "status": "Failed", "user": "root", "ip": "203.0.113.5"},
+        {"month": "Nov", "day": "11", "time": "08:15:03", "status": "Failed", "user": "admin", "ip": "203.0.113.5"},
+        {"month": "Nov", "day": "11", "time": "08:15:05", "status": "Failed", "user": "test", "ip": "203.0.113.5"},
+    ]
+
+    result = find_brute_force_ips(events)
+
+    assert "203.0.113.5" in result
+    assert result["203.0.113.5"] == 3
+
+
+def test_find_brute_force_ips_ignores_failures_spread_out():
+    events = [
+        {"month": "Nov", "day": "11", "time": "10:00:00", "status": "Failed", "user": "zee", "ip": "192.168.1.10"},
+        {"month": "Nov", "day": "11", "time": "10:02:00", "status": "Failed", "user": "zee", "ip": "192.168.1.10"},
+        {"month": "Nov", "day": "11", "time": "10:04:00", "status": "Failed", "user": "zee", "ip": "192.168.1.10"},
+    ]
+
+    result = find_brute_force_ips(events)
+
+    assert result == {}
